@@ -128,6 +128,20 @@ body {
   transform: translateY(-2px);
 }
 
+/* Blue Action Button */
+.btn-action-blue {
+  background: rgba(var(--electric-blue-raw), 0.1);
+  border: 1px solid var(--electric-blue);
+  color: var(--electric-blue);
+  box-shadow: inset 0 0 10px rgba(var(--electric-blue-raw), 0.2), 0 0 10px rgba(var(--electric-blue-raw), 0.2);
+}
+
+.btn-action-blue:hover {
+  background: rgba(var(--electric-blue-raw), 0.2);
+  box-shadow: inset 0 0 15px rgba(var(--electric-blue-raw), 0.4), 0 0 20px rgba(var(--electric-blue-raw), 0.4);
+  transform: translateY(-2px);
+}
+
 
 /* Form Inputs */
 .neon-input {
@@ -286,9 +300,89 @@ body {
 }
 
 .app-container {
-  max-width: 1000px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 2rem 1rem;
   width: 100%;
   flex: 1;
+}
+
+/* --- New Live Feed Cyberpunk Elements --- */
+
+.cyber-card {
+  background: rgba(15, 15, 20, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(var(--electric-blue-raw), 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 15px rgba(var(--electric-blue-raw), 0.05);
+  transition: all 0.3s ease;
+}
+
+.cyber-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--electric-blue), transparent);
+  opacity: 0.5;
+}
+
+.cyber-card:hover {
+  border-color: rgba(var(--electric-blue-raw), 0.8);
+  box-shadow: inset 0 0 20px rgba(var(--electric-blue-raw), 0.1), 0 0 15px rgba(var(--electric-blue-raw), 0.2);
+  transform: translateY(-2px);
+}
+
+.cyber-card-pink {
+  border-color: rgba(var(--neon-pink-raw), 0.3);
+  box-shadow: inset 0 0 15px rgba(var(--neon-pink-raw), 0.05);
+}
+
+.cyber-card-pink::before {
+  background: linear-gradient(90deg, transparent, var(--neon-pink), transparent);
+}
+
+.cyber-card-pink:hover {
+  border-color: rgba(var(--neon-pink-raw), 0.8);
+  box-shadow: inset 0 0 20px rgba(var(--neon-pink-raw), 0.1), 0 0 15px rgba(var(--neon-pink-raw), 0.2);
+}
+
+.roast-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(var(--electric-blue-raw), 0.3);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  padding: 1rem;
+  border-radius: 4px;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.roast-input:focus {
+  border-color: var(--electric-blue);
+  box-shadow: 0 0 15px rgba(var(--electric-blue-raw), 0.2);
+}
+
+.roast-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.roast-input-green {
+  border-color: rgba(var(--toxic-green-raw), 0.3);
+}
+
+.roast-input-green:focus {
+  border-color: var(--toxic-green);
+  box-shadow: 0 0 15px rgba(var(--toxic-green-raw), 0.2);
+}
+
+.roast-input-green::placeholder {
+  color: rgba(var(--toxic-green-raw), 0.3);
 }

@@ -377,57 +377,79 @@ export default function App() {
       {activeArena ? (
         // --- ARENA / ROOM VIEW ---
         <div className="arena-view">
-          <button onClick={() => setActiveArenaId(null)} style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <ArrowLeft size={16} /> Back to Live Feed
+          <button onClick={() => setActiveArenaId(null)} style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}>
+            <ArrowLeft size={16} /> [BACK_TO_FEED]
           </button>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '2rem' }}>
-            {/* Left: The Battle */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 300px) 1fr minmax(250px, 300px)', gap: '2rem' }}>
+
+            {/* Left Column: Live Activity Feed */}
+            <div className="cyber-card" style={{ height: 'fit-content', padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--toxic-green)' }}>
+                <Activity size={16} /> <span style={{ fontWeight: 'bold', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Live Activity</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                {activityFeed.map(feed => (
+                  <div key={feed.id} style={{ display: 'flex', gap: '0.5rem' }}>
+                    <span className="mono" style={{ opacity: 0.5 }}>{new Date(feed.timestamp).toTimeString().split(' ')[0]}</span>
+                    <span>{feed.message}</span>
+                  </div>
+                ))}
+                {activityFeed.length === 0 && <div style={{ fontStyle: 'italic' }}>Quiet in here...</div>}
+              </div>
+            </div>
+
+            {/* Center Column: The Battle */}
             <div>
               {/* OP */}
-              <div style={{ background: 'var(--panel-bg)', border: '1px solid var(--neon-magenta)', borderRadius: '8px', padding: '1.5rem', marginBottom: '2rem' }}>
+              <div className="cyber-card cyber-card-pink" style={{ marginBottom: '2rem', padding: '2rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(45deg, var(--monad-purple), var(--neon-magenta))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{activeArena.opAvatar}</div>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '4px', background: 'linear-gradient(45deg, var(--neon-pink), var(--electric-blue))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{activeArena.opAvatar}</div>
                     <div>
-                      <div style={{ fontWeight: 'bold' }}>{activeArena.opName} <span style={{ color: 'var(--text-secondary)', fontWeight: 'normal' }}>{activeArena.opHandle}</span></div>
-                      <div style={{ color: 'var(--neon-magenta)', fontSize: '0.8rem' }}>Target • Staked {activeArena.stake} MND</div>
+                      <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{activeArena.opName} <span style={{ color: 'var(--text-secondary)', fontWeight: 'normal', fontSize: '1rem' }}>{activeArena.opHandle}</span></div>
+                      <div style={{ color: 'var(--neon-pink)', fontSize: '0.8rem', marginTop: '0.2rem', textTransform: 'uppercase', letterSpacing: '1px' }}>[TARGET] • Staked {activeArena.stake} MND</div>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div className={`mono ${activeArena.status === 'active' ? 'glow-magenta' : ''}`} style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+                    <div className={`mono ${activeArena.status === 'active' ? 'glow-pink' : ''}`} style={{ fontSize: '2.5rem', fontWeight: 'bold', lineHeight: '1', animation: activeArena.status === 'active' ? 'pulse 1s infinite' : 'none', color: activeArena.status === 'active' ? 'var(--neon-pink)' : 'var(--text-secondary)' }}>
                       {formatTimeInfo(activeArena.endTime)}
                     </div>
                   </div>
                 </div>
-                <p style={{ fontSize: '1.3rem' }}>"{activeArena.text}"</p>
+                <p style={{ fontSize: '1.5rem', marginTop: '1rem', borderLeft: '4px solid var(--neon-pink)', paddingLeft: '1rem' }}>"{activeArena.text}"</p>
               </div>
 
               {/* Roasts */}
-              <h3 className="glow-purple" style={{ marginBottom: '1rem' }}>The Arena ({activeArena.roasts.length})</h3>
+              <h3 className="glow-blue" style={{ marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '2px' }}>[ THE ARENA ] ({activeArena.roasts.length})</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
                 {activeArena.roasts.map(roast => {
                   const isWinner = activeArena.status === 'resolved' && activeArena.winnerRoastId === roast.id;
                   return (
-                    <div key={roast.id} style={{ background: isWinner ? 'rgba(0, 255, 163, 0.1)' : 'rgba(255, 255, 255, 0.03)', border: `1px solid ${isWinner ? 'var(--neon-green)' : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                          <span style={{ color: 'var(--monad-purple)', fontWeight: 'bold' }}>{roast.roasterName}</span>
+                    <div key={roast.id} id={`roast-${roast.id}`} className={isWinner ? 'cyber-card' : ''} style={{
+                      background: isWinner ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                      border: `1px solid ${isWinner ? 'var(--toxic-green)' : 'rgba(var(--electric-blue-raw), 0.2)'}`,
+                      borderRadius: '8px', padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <div style={{ flex: 1, paddingRight: '1rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ color: 'var(--electric-blue)', fontWeight: 'bold' }}>{roast.roasterName}</span>
                         </div>
-                        <p>{roast.text}</p>
+                        <p style={{ fontSize: '1.1rem' }}>{roast.text}</p>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Backed Pool</div>
-                          <div className="mono glow-gold" style={{ fontSize: '1.2rem' }}>{roast.backedStake.toFixed(4)}</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Backed Pool</div>
+                          <div className="mono glow-gold" style={{ fontSize: '1.5rem' }}>{roast.backedStake.toFixed(4)}</div>
                         </div>
                         {activeArena.status === 'active' && (
-                          <button className="btn-terminal btn-stake" onClick={() => handleStakeOnRoast(activeArena.id, roast.id)} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
+                          <button className="btn-terminal btn-action-green" onClick={() => handleStakeOnRoast(activeArena.id, roast.id)} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
                             STAKE 0.05
                           </button>
                         )}
-                        {roast.myBackedAmount > 0 && <div className="mono" style={{ color: 'var(--neon-green)' }}>+ {roast.myBackedAmount.toFixed(2)}</div>}
+                        {roast.myBackedAmount > 0 && <div className="mono glow-green" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.8rem' }}><span style={{ color: 'var(--text-secondary)' }}>YOUR STAKE</span><span>{roast.myBackedAmount.toFixed(4)}</span></div>}
                       </div>
                     </div>
                   );
@@ -436,33 +458,59 @@ export default function App() {
 
               {activeArena.status === 'active' && (
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                  <input type="text" value={newRoastText} onChange={e => setNewRoastText(e.target.value)} placeholder="Type a lethal roast..." style={{ flex: 1, background: 'rgba(0,0,0,0.5)', border: '1px solid var(--monad-purple)', borderRadius: '4px', padding: '1rem', color: 'white', outline: 'none' }} />
-                  <button className="btn-terminal btn-roast" onClick={() => handleSubmitRoast(activeArena.id)}>ROAST (0.01 MND)</button>
+                  <input type="text" value={newRoastText} onChange={e => setNewRoastText(e.target.value)} placeholder="Type a lethal roast..." className="roast-input" />
+                  <button className="btn-terminal btn-action-blue" onClick={() => handleSubmitRoast(activeArena.id)} style={{ padding: '1rem 2rem' }}>[ROAST] 0.01 MND</button>
                 </div>
               )}
             </div>
 
-            {/* Right: Room Stats & Activity */}
-            <div style={{ background: 'var(--panel-bg)', borderRadius: '8px', border: '1px solid var(--border-color)', padding: '1.5rem', height: 'fit-content' }}>
-              <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Arena Pool (TLV)</div>
-                <div className="mono glow-gold" style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-                  {(activeArena.stake + activeArena.roasts.reduce((acc, r) => acc + r.entryStake + r.backedStake, 0)).toFixed(4)}
+            {/* Right Column: Stats & Leaderboard */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              <div className="cyber-card" style={{ padding: '1.5rem' }}>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '1px' }}>Arena Pool (TLV)</div>
+                <div className="mono glow-gold" style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>
+                  {(activeArena.stake + activeArena.roasts.reduce((acc, r) => acc + r.entryStake + r.backedStake, 0)).toFixed(4)} MND
                 </div>
               </div>
 
-              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--neon-green)' }}>
-                  <Activity size={16} /> <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>LIVE ACTIVITY</span>
+              <div className="cyber-card" style={{ padding: '1.5rem', height: 'fit-content' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--electric-blue)' }}>
+                  <Trophy size={16} /> <span style={{ fontWeight: 'bold', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Top Gladiators</span>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  {activityFeed.map(feed => (
-                    <div key={feed.id} style={{ display: 'flex', gap: '0.5rem' }}>
-                      <span className="mono" style={{ opacity: 0.5 }}>{new Date(feed.timestamp).toTimeString().split(' ')[0]}</span>
-                      <span>{feed.message}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {[...activeArena.roasts].sort((a, b) => b.backedStake - a.backedStake).slice(0, 5).map((r, idx) => (
+                    <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.7rem' }}>
+                      <div>
+                        <div style={{ fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                          <span className="mono" style={{ color: idx === 0 ? 'rgb(255, 215, 0)' : 'var(--text-secondary)' }}>#{idx + 1}</span>
+                          {r.roasterName}
+                        </div>
+                        <div className="mono glow-gold" style={{ fontSize: '0.9rem' }}>{r.backedStake.toFixed(4)} MND</div>
+                      </div>
+                      <button
+                        className="btn-terminal"
+                        style={{ padding: '0.4rem 0.6rem', fontSize: '0.75rem', background: 'rgba(0,247,255,0.1)', border: '1px solid var(--electric-blue)', color: 'var(--electric-blue)' }}
+                        onClick={() => {
+                          const el = document.getElementById(`roast-${r.id}`);
+                          if (el) {
+                            const y = el.getBoundingClientRect().top + window.scrollY - 100;
+                            window.scrollTo({ top: y, behavior: 'smooth' });
+
+                            // Visual flash effect on the target roast card
+                            el.style.boxShadow = 'inset 0 0 30px rgba(0, 247, 255, 0.6)';
+                            el.style.borderColor = 'var(--electric-blue)';
+                            setTimeout(() => {
+                              el.style.boxShadow = '';
+                              el.style.borderColor = 'rgba(0, 247, 255, 0.2)';
+                            }, 1000);
+                          }
+                        }}
+                      >
+                        VIEW
+                      </button>
                     </div>
                   ))}
-                  {activityFeed.length === 0 && <div>Quiet in here...</div>}
+                  {activeArena.roasts.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>No gladiators yet.</div>}
                 </div>
               </div>
             </div>
@@ -473,48 +521,50 @@ export default function App() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '2rem' }}>
           <div>
             {/* Create Post */}
-            <div style={{ background: 'var(--panel-bg)', border: '1px dashed var(--monad-purple)', borderRadius: '8px', padding: '1.5rem', marginBottom: '2.5rem', display: 'flex', gap: '1rem' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(45deg, var(--monad-purple), var(--neon-magenta))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', flexShrink: 0 }}>{currentUser.avatar}</div>
+            <div className="cyber-card" style={{ padding: '2rem', marginBottom: '2.5rem', display: 'flex', gap: '1.5rem' }}>
+              <div style={{ width: '50px', height: '50px', borderRadius: '4px', background: 'linear-gradient(45deg, var(--neon-pink), var(--electric-blue))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem', flexShrink: 0 }}>
+                {currentUser.avatar}
+              </div>
               <div style={{ flex: 1 }}>
-                <input type="text" value={newArenaText} onChange={e => setNewArenaText(e.target.value)} placeholder="Post a controversial opinion... (Cost: 0.05 MND)" style={{ width: '100%', background: 'transparent', border: 'none', color: 'white', fontSize: '1.1rem', outline: 'none', marginBottom: '1rem' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Timer locks to 5:00 on post.</div>
-                  <button className="btn-terminal btn-roast" onClick={handleCreateArena} style={{ padding: '0.5rem 1rem' }}>DROP BAIT</button>
+                <input type="text" className="roast-input roast-input-green" value={newArenaText} onChange={e => setNewArenaText(e.target.value)} placeholder="Post a controversial opinion... (Cost: 0.05 MND)" style={{ marginBottom: '1.5rem' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="mono" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>&gt; Timer locks to 5:00 on post.</div>
+                  <button className="btn-terminal btn-action-pink" onClick={handleCreateArena}>[ DROP BAIT ]</button>
                 </div>
               </div>
             </div>
 
-            <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--neon-green)', display: 'inline-block', animation: 'pulse 1s infinite' }}></span>
+            <h3 className="glow-blue" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', textTransform: 'uppercase', letterSpacing: '2px' }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--electric-blue)', display: 'inline-block', animation: 'pulse-glow 1s infinite' }}></span>
               Live Arenas ({liveArenas.length})
             </h3>
 
             {liveArenas.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px' }}>
-                No active arenas. Be the first to drop bait.
+              <div className="mono" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '4px' }}>
+                [ NO ACTIVE ARENAS. BE THE FIRST TO DROP BAIT. ]
               </div>
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {liveArenas.map(arena => (
-                <div key={arena.id} onClick={() => setActiveArenaId(arena.id)} style={{ background: 'var(--panel-bg)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '1.5rem', cursor: 'pointer', transition: 'transform 0.2s', position: 'relative' }}>
-                  <div style={{ position: 'absolute', top: '-1px', left: '-1px', right: '-1px', height: '2px', background: 'linear-gradient(90deg, var(--monad-purple), var(--neon-magenta))' }}></div>
+                <div key={arena.id} className="cyber-card" onClick={() => setActiveArenaId(arena.id)} style={{ cursor: 'pointer' }}>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'linear-gradient(45deg, var(--monad-purple), var(--neon-magenta))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{arena.opAvatar}</div>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '4px', background: 'linear-gradient(45deg, var(--neon-pink), var(--electric-blue))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{arena.opAvatar}</div>
                       <div>
-                        <span style={{ fontWeight: 'bold' }}>{arena.opName}</span> <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{arena.opHandle}</span>
+                        <span style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{arena.opName}</span> <span className="mono" style={{ color: 'var(--electric-blue)', fontSize: '0.9rem', marginLeft: '0.5rem' }}>{arena.opHandle}</span>
                       </div>
                     </div>
-                    <div className="mono glow-magenta" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Clock size={16} /> {formatTimeInfo(arena.endTime)}
+                    <div className="mono glow-pink" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem', animation: 'pulse 1s infinite' }}>
+                      {formatTimeInfo(arena.endTime)}
                     </div>
                   </div>
-                  <p style={{ fontSize: '1.2rem', marginBottom: '1rem', marginLeft: '2.5rem' }}>"{arena.text}"</p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginLeft: '2.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{arena.roasts.length} Gladiators</div>
-                    <div className="mono glow-gold">TLV: {(arena.stake + arena.roasts.reduce((a, r) => a + r.entryStake + r.backedStake, 0)).toFixed(4)} MND</div>
+                  <p style={{ fontSize: '1.3rem', marginBottom: '1.5rem', marginLeft: '3rem', borderLeft: '3px solid rgba(255,255,255,0.1)', paddingLeft: '1rem' }}>"{arena.text}"</p>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginLeft: '3rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
+                    <div className="mono" style={{ color: 'var(--toxic-green)', fontSize: '0.9rem' }}>{arena.roasts.length} Gladiators</div>
+                    <div className="mono glow-gold" style={{ fontSize: '1.1rem' }}>TLV: {(arena.stake + arena.roasts.reduce((a, r) => a + r.entryStake + r.backedStake, 0)).toFixed(4)} MND</div>
                   </div>
                 </div>
               ))}
@@ -523,10 +573,11 @@ export default function App() {
 
           {/* Side Panel */}
           <div>
-            <div style={{ background: 'rgba(255,0,85,0.05)', border: '1px solid rgba(255,0,85,0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-              <div style={{ color: 'var(--neon-magenta)', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '0.5rem' }}>GRAVEYARD (DEAD BAITS)</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                Items are permanently removed from the live network after 5 minutes. {deadArenas.length} arenas perished today.
+            <div className="cyber-card cyber-card-pink" style={{ padding: '1.5rem' }}>
+              <div style={{ color: 'var(--neon-pink)', fontWeight: 'bold', fontSize: '1rem', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>[ GRAVEYARD ]</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                Items are permanently purged from the live network after 5 minutes. <br /><br />
+                <span className="mono glow-pink" style={{ fontSize: '1.2rem' }}>{deadArenas.length}</span> arenas perished today.
               </div>
             </div>
           </div>
