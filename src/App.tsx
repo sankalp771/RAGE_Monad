@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Flame, ArrowLeft, Trophy, Clock, Wallet, CheckCircle, Crosshair, User, LogIn, Activity } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
+
+const socket = io('http://localhost:3001');
 
 // --- Types ---
 type UserAccount = {
@@ -40,29 +43,16 @@ type ActivityLog = {
   timestamp: number;
 };
 
-// --- Initial Mock Data ---
-const MOCK_ARENAS: Arena[] = [
-  {
-    id: 'a1',
-    opId: 'u1',
-    opName: 'DuveshTheDev',
-    opHandle: '@duvesh_dev',
-    opAvatar: 'D',
-    text: "I use ChatGPT for every API call. Documentation is for boomers.",
-    stake: 0.05,
-    endTime: Date.now() + 5 * 60 * 1000, // 5 minutes exactly
-    status: 'active',
-    roasts: [
-      { id: 'r1', roasterId: 'u2', roasterName: 'Sankalp', text: "Skill issue bro.", entryStake: 0.01, backedStake: 0.07, myBackedAmount: 0 },
-      { id: 'r2', roasterId: 'u3', roasterName: 'Aman', text: "Bro writes require() and feels powerful.", entryStake: 0.01, backedStake: 0.04, myBackedAmount: 0 },
-    ],
-  }
-];
+// Ensure initial state relies on the websocket
+const INITIAL_ARENAS: Arena[] = [];
 
 export default function App() {
   // --- Global State ---
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
-  const [arenas, setArenas] = useState<Arena[]>(MOCK_ARENAS);
+  const [arenas, setArenas] = useState<Arena[]>(INITIAL_ARENAS);
+  // Store previous arenas to detect generic status changes for payouts
+  const prevArenasRef = useRef<Arena[]>([]);
+
   const [activeArenaId, setActiveArenaId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
   const [activityFeed, setActivityFeed] = useState<ActivityLog[]>([]);
@@ -73,74 +63,80 @@ export default function App() {
   const [newArenaText, setNewArenaText] = useState("");
   const [newRoastText, setNewRoastText] = useState("");
 
-  // --- The Engine Tick (Room synchronization simulation) ---
+  // --- Real-Time Sync & Engine Tick ---
   useEffect(() => {
+    // Sync the master clock for UI visually
     const timer = setInterval(() => {
-      const now = Date.now();
-      setCurrentTime(now);
-
-      setArenas(prevArenas => prevArenas.map(arena => {
-        if (arena.status === 'active' && arena.endTime <= now) {
-          return resolveArena(arena);
-        }
-        return arena;
-      }));
+      setCurrentTime(Date.now());
     }, 1000);
-    return () => clearInterval(timer);
-  }, [currentUser]); // Dependency on currentUser to handle payouts to them
 
-  // --- Logic: Resolve Arena ---
-  const resolveArena = (arena: Arena): Arena => {
-    if (arena.roasts.length === 0) {
-      logActivity(`Arena by ${arena.opHandle} closed with no roasts.`);
-      return { ...arena, status: 'resolved' };
-    }
+    // Socket Handlers
+    socket.on('state-update', (serverArenas: Arena[]) => {
+      setArenas(serverArenas);
 
-    const winner = arena.roasts.reduce((prev, current) =>
-      (current.backedStake > prev.backedStake) ? current : prev
-    );
+      // Check for payouts
+      if (currentUser) {
+        serverArenas.forEach(arena => {
+          const oldArena = prevArenasRef.current.find(a => a.id === arena.id);
+          // If it just resolved on the server
+          if (oldArena && oldArena.status === 'active' && arena.status === 'resolved') {
+            processPayout(arena);
+          }
+        });
+      }
+      prevArenasRef.current = serverArenas;
+    });
+
+    socket.on('activity-update', (log: ActivityLog) => {
+      setActivityFeed(prev => {
+        // Prevent dupes
+        if (prev.find(p => p.id === log.id)) return prev;
+        return [log, ...prev].slice(0, 10);
+      });
+    });
+
+    return () => {
+      clearInterval(timer);
+      socket.off('state-update');
+      socket.off('activity-update');
+    };
+  }, [currentUser]);
+
+  const processPayout = (arena: Arena) => {
+    if (!currentUser || arena.roasts.length === 0 || !arena.winnerRoastId) return;
+
+    const winner = arena.roasts.find(r => r.id === arena.winnerRoastId);
+    if (!winner) return;
 
     const losingBackingPool = arena.roasts
       .filter(r => r.id !== winner.id)
       .reduce((sum, r) => sum + r.backedStake, 0);
 
     const winnerBackingPool = winner.backedStake;
+    let payout = 0;
 
-    logActivity(`🔥 ROAST WARS ENDED: ${winner.roasterName} won the pool! 🔥`);
-
-    // Payout if current user backed winner or IS the winner/OP
-    if (currentUser) {
-      let payout = 0;
-
-      // 1. Did the user back the winning roast?
-      if (winner.myBackedAmount > 0 && winnerBackingPool > 0) {
-        const userShareRatio = winner.myBackedAmount / winnerBackingPool;
-        const profit = userShareRatio * (0.9 * losingBackingPool);
-        payout += winner.myBackedAmount + profit;
-      }
-
-      // 2. Is the user the winning roaster?
-      if (winner.roasterId === currentUser.id) {
-        const roasterReward = (0.7 * arena.stake) + (0.7 * (arena.roasts.length - 1) * 0.01);
-        payout += roasterReward;
-      }
-
-      // 3. Is the user the OP?
-      if (arena.opId === currentUser.id) {
-        const opReward = 0.05 * (losingBackingPool + winnerBackingPool);
-        payout += opReward;
-      }
-
-      if (payout > 0) {
-        setCurrentUser(prev => prev ? { ...prev, balance: prev.balance + payout } : null);
-      }
+    // 1. Did user back the winner?
+    // Note: Since 'myBackedAmount' is local to tab, calculate logically, OR ideally track globally per user ID in server.
+    // For this prototype we will assume the local DOM tracking works if they didn't refresh.
+    if (winner.myBackedAmount > 0 && winnerBackingPool > 0) {
+      const userShareRatio = winner.myBackedAmount / winnerBackingPool;
+      const profit = userShareRatio * (0.9 * losingBackingPool);
+      payout += winner.myBackedAmount + profit;
     }
 
-    return { ...arena, status: 'resolved', winnerRoastId: winner.id };
-  };
+    // 2. Is user winning roaster?
+    if (winner.roasterId === currentUser.id) {
+      payout += (0.7 * arena.stake) + (0.7 * (arena.roasts.length - 1) * 0.01);
+    }
 
-  const logActivity = (msg: string) => {
-    setActivityFeed(prev => [{ id: Math.random().toString(), message: msg, timestamp: Date.now() }, ...prev].slice(0, 10));
+    // 3. Is user the OP?
+    if (arena.opId === currentUser.id) {
+      payout += 0.05 * (losingBackingPool + winnerBackingPool);
+    }
+
+    if (payout > 0) {
+      setCurrentUser(prev => prev ? { ...prev, balance: prev.balance + payout } : null);
+    }
   };
 
   // --- Actions ---
@@ -155,7 +151,8 @@ export default function App() {
       avatar: authName.charAt(0).toUpperCase(),
       balance: 10.0 // Everyone starts with 10 MONAD airdrop
     });
-    logActivity(`${cleanHandle} joined the room.`);
+
+    socket.emit('join', cleanHandle);
   };
 
   const handleCreateArena = () => {
@@ -164,22 +161,16 @@ export default function App() {
 
     setCurrentUser({ ...currentUser, balance: currentUser.balance - 0.05 });
 
-    const newArena: Arena = {
-      id: Math.random().toString(36).substring(7),
+    // Emit to Server
+    socket.emit('create-arena', {
       opId: currentUser.id,
       opName: currentUser.name,
       opHandle: currentUser.handle,
       opAvatar: currentUser.avatar,
       text: newArenaText,
-      stake: 0.05,
-      endTime: Date.now() + 5 * 60 * 1000, // 5 minutes live!
-      status: 'active',
-      roasts: []
-    };
+    });
 
-    setArenas([newArena, ...arenas]);
     setNewArenaText("");
-    logActivity(`${currentUser.handle} dropped a new Ragebait!`);
   };
 
   const handleStakeOnRoast = (arenaId: string, roastId: string) => {
@@ -188,21 +179,18 @@ export default function App() {
 
     setCurrentUser({ ...currentUser, balance: currentUser.balance - amount });
 
-    setArenas(prev => prev.map(arena => {
-      if (arena.id !== arenaId) return arena;
+    // Update local immediately for 'myBackedAmount' tracking
+    setArenas(prev => prev.map(a => {
+      if (a.id !== arenaId) return a;
       return {
-        ...arena,
-        roasts: arena.roasts.map(roast => {
-          if (roast.id !== roastId) return roast;
-          return {
-            ...roast,
-            backedStake: roast.backedStake + amount,
-            myBackedAmount: roast.myBackedAmount + amount
-          };
-        })
-      };
+        ...a,
+        roasts: a.roasts.map(r => r.id === roastId ? { ...r, myBackedAmount: r.myBackedAmount + amount } : r)
+      }
     }));
-    logActivity(`${currentUser.handle} staked ${amount} on a roast!`);
+
+    socket.emit('stake-roast', {
+      arenaId, roastId, amount, userHandle: currentUser.handle
+    });
   };
 
   const handleSubmitRoast = (arenaId: string) => {
@@ -212,23 +200,20 @@ export default function App() {
 
     setCurrentUser({ ...currentUser, balance: currentUser.balance - entryFee });
 
-    const newRoast: RoastEntry = {
-      id: Math.random().toString(36).substring(7),
-      roasterId: currentUser.id,
-      roasterName: currentUser.name,
-      text: newRoastText,
-      entryStake: entryFee,
-      backedStake: 0,
-      myBackedAmount: 0
-    };
-
-    setArenas(prev => prev.map(arena => {
-      if (arena.id !== arenaId) return arena;
-      return { ...arena, roasts: [...arena.roasts, newRoast] };
-    }));
+    socket.emit('submit-roast', {
+      arenaId,
+      roastData: {
+        id: Math.random().toString(36).substring(7),
+        roasterId: currentUser.id,
+        roasterName: currentUser.name,
+        text: newRoastText,
+        entryStake: entryFee,
+        backedStake: 0,
+        myBackedAmount: 0
+      }
+    });
 
     setNewRoastText("");
-    logActivity(`${currentUser.handle} entered the arena with a roast.`);
   };
 
   // --- Views ---
@@ -242,19 +227,119 @@ export default function App() {
 
   if (!currentUser) {
     return (
-      <div className="app-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
-        <div style={{ background: 'var(--panel-bg)', padding: '3rem', borderRadius: '12px', border: '1px solid var(--monad-purple)', width: '100%', maxWidth: '400px', textAlign: 'center' }}>
-          <Flame size={48} color="var(--monad-purple)" style={{ margin: '0 auto 1rem' }} />
-          <h1 className="glow-purple" style={{ marginBottom: '2rem' }}>MONAD RAGEBAIT</h1>
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <input type="text" placeholder="Display Name (e.g. Duvesh)" value={authName} onChange={e => setAuthName(e.target.value)}
-              style={{ padding: '1rem', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '4px' }} required />
-            <input type="text" placeholder="Handle (e.g. @dev_god)" value={authHandle} onChange={e => setAuthHandle(e.target.value)}
-              style={{ padding: '1rem', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '4px' }} required />
-            <button type="submit" className="btn-terminal btn-stake" style={{ marginTop: '1rem' }}>CONNECT & CLAIM 10 MND</button>
-          </form>
+      <>
+        <div className="cyberpunk-bg"></div>
+        <div className="app-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', position: 'relative', zIndex: 10 }}>
+
+          {/* Neon sparks via inline divs to avoid excessive CSS rules */}
+          <div style={{ position: 'absolute', top: '20%', left: '15%', width: '4px', height: '4px', background: 'var(--neon-pink)', boxShadow: '0 0 10px 4px rgba(255,0,127,0.8)', animation: 'float 3s infinite alternate' }}></div>
+          <div style={{ position: 'absolute', top: '70%', right: '20%', width: '6px', height: '6px', background: 'var(--toxic-green)', boxShadow: '0 0 10px 4px rgba(0,255,136,0.8)', animation: 'float 4s infinite alternate-reverse' }}></div>
+          <div style={{ position: 'absolute', top: '40%', right: '10%', width: '3px', height: '3px', background: 'var(--electric-blue)', boxShadow: '0 0 10px 4px rgba(0,247,255,0.8)', animation: 'float 2s infinite alternate' }}></div>
+
+          <div style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: '5rem',
+            width: '100%',
+            maxWidth: '1200px'
+          }}>
+
+            {/* Left: Branding */}
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                <Flame size={64} style={{ color: 'var(--neon-pink)', filter: 'drop-shadow(0 0 20px rgba(255,0,127,0.8))' }} />
+                <h1 style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '4.5rem',
+                  lineHeight: '0.9',
+                  margin: 0,
+                  textTransform: 'uppercase',
+                  background: 'linear-gradient(90deg, var(--neon-pink), var(--electric-blue), var(--neon-pink))',
+                  backgroundSize: '200% auto',
+                  color: 'transparent',
+                  WebkitBackgroundClip: 'text',
+                  animation: 'text-shimmer 4s linear infinite',
+                  letterSpacing: '-0.05em'
+                }}>
+                  MONAD<br />RAGEBAIT
+                </h1>
+              </div>
+
+              <h2 style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '1.5rem',
+                color: 'var(--text-primary)',
+                marginBottom: '2rem',
+                borderLeft: '4px solid var(--toxic-green)',
+                paddingLeft: '1rem',
+                textShadow: '0 0 10px rgba(255,255,255,0.3)'
+              }}>
+                Stake the Roast.<br />Win the Chaos.
+              </h2>
+
+              {/* Typing effect simulation */}
+              <div className="mono" style={{
+                color: 'var(--electric-blue)',
+                fontSize: '1rem',
+                opacity: 0.8,
+                background: 'rgba(0,247,255,0.1)',
+                padding: '0.8rem',
+                border: '1px solid rgba(0,247,255,0.3)',
+                display: 'inline-block'
+              }}>
+                &gt; Likes are free. Consequences aren't_<span style={{ animation: 'flash 1s infinite' }}></span>
+              </div>
+            </div>
+
+            {/* Right: The Glass Card */}
+            <div className="login-glass-card" style={{ flex: '0 0 450px' }}>
+              <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                <div>
+                  <label className="mono" style={{ color: 'var(--neon-pink)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '2px', display: 'block', marginBottom: '0.5rem' }}>
+                    [IDENTIFICATION]
+                  </label>
+                  <input
+                    type="text"
+                    className="neon-input"
+                    placeholder="🔥 Your Arena Name"
+                    value={authName}
+                    onChange={e => setAuthName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mono" style={{ color: 'var(--electric-blue)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '2px', display: 'block', marginBottom: '0.5rem' }}>
+                    [NETWORK ALIAS]
+                  </label>
+                  <input
+                    type="text"
+                    className="neon-input"
+                    placeholder="@ Your Roast Handle"
+                    value={authHandle}
+                    onChange={e => setAuthHandle(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ marginTop: '1rem', position: 'relative' }}>
+                  <button
+                    type="submit"
+                    className="btn-terminal btn-terminal-large btn-action-green"
+                    style={{ animation: 'pulse-glow 2s infinite' }}
+                  >
+                    ⚡ ENTER THE ARENA
+                  </button>
+                </div>
+
+              </form>
+            </div>
+
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
