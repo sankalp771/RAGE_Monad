@@ -1,0 +1,160 @@
+:root {
+  /* Colors */
+  --bg-color: #0a0a0a;
+  --panel-bg: rgba(20, 20, 20, 0.85);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  
+  --monad-purple-raw: 131, 110, 249;
+  --monad-purple: rgb(var(--monad-purple-raw));
+  --neon-green-raw: 0, 255, 163;
+  --neon-green: rgb(var(--neon-green-raw));
+  --neon-magenta-raw: 255, 0, 85;
+  --neon-magenta: rgb(var(--neon-magenta-raw));
+  --casino-gold-raw: 255, 215, 0;
+  --casino-gold: rgb(var(--casino-gold-raw));
+
+  /* Typography */
+  --font-text: 'Inter', -apple-system, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-text);
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  min-height: 100vh;
+  /* Cyberpunk grid background */
+  background-image: linear-gradient(var(--border-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+  background-size: 50px 50px;
+  background-position: center top;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Base Utility Classes */
+.mono {
+  font-family: var(--font-mono);
+  letter-spacing: -0.05em;
+}
+
+.glow-purple {
+  text-shadow: 0 0 10px rgba(var(--monad-purple-raw), 0.7);
+}
+
+.glow-gold {
+  color: var(--casino-gold);
+  text-shadow: 0 0 15px rgba(var(--casino-gold-raw), 0.8), 0 0 5px rgba(var(--casino-gold-raw), 1);
+}
+
+.glow-green {
+  color: var(--neon-green);
+  text-shadow: 0 0 10px rgba(var(--neon-green-raw), 0.7);
+}
+
+.glow-magenta {
+  color: var(--neon-magenta);
+  text-shadow: 0 0 10px rgba(var(--neon-magenta-raw), 0.7);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: var(--font-mono);
+  outline: none;
+}
+
+/* Terminal Buttons */
+.btn-terminal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 700;
+  font-size: 1rem;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(30, 30, 30, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  transition: all 0.2s cubic-bezier(0.19, 1, 0.22, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-terminal::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  transition: border-color 0.2s;
+  pointer-events: none;
+}
+
+.btn-terminal:hover {
+  background: rgba(40, 40, 40, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+.btn-terminal:active {
+  transform: translateY(0);
+}
+
+.btn-stake {
+  background: rgba(var(--neon-green-raw), 0.1);
+  border-color: rgba(var(--neon-green-raw), 0.3);
+  color: var(--neon-green);
+}
+
+.btn-stake:hover {
+  background: rgba(var(--neon-green-raw), 0.2);
+  border-color: var(--neon-green);
+  box-shadow: 0 0 20px rgba(var(--neon-green-raw), 0.4);
+}
+
+.btn-roast {
+  background: rgba(var(--neon-magenta-raw), 0.1);
+  border-color: rgba(var(--neon-magenta-raw), 0.3);
+  color: var(--neon-magenta);
+}
+
+.btn-roast:hover {
+  background: rgba(var(--neon-magenta-raw), 0.2);
+  border-color: var(--neon-magenta);
+  box-shadow: 0 0 20px rgba(var(--neon-magenta-raw), 0.4);
+}
+
+/* Layout Utilities */
+.app-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  width: 100%;
+  flex: 1;
+}
+
+/* Animations */
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.02); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes flash {
+  0% { background-color: transparent; }
+  10% { background-color: rgba(var(--casino-gold-raw), 0.3); }
+  100% { background-color: transparent; }
+}
